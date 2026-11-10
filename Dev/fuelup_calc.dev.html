@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="luvluna">
+    <meta name="version" content="2.5.2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>fuelup calc</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23455A64' d='M18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10M12,10H6V5H12M19.77,7.23L19.78,7.22L16.06,3.5L15,4.56L17.11,6.67C16.17,7.03 15.5,7.93 15.5,9A2.5,2.5 0 0,0 18,11.5C18.36,11.5 18.69,11.42 19,11.29V18.5A1,1 0 0,1 18,19.5A1,1 0 0,1 17,18.5V14A2,2 0 0,0 15,12H14V5A2,2 0 0,0 12,3H6A2,2 0 0,0 4,5V21H14V13.5H15.5V18.5A2.5,2.5 0 0,0 18,21A2.5,2.5 0 0,0 20.5,18.5V9.5A1,1 0 0,0 19.77,7.23Z' /%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9eef3 100%);
+            min-height: 100dvh;
+            padding: 12px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 主内容容器 - 自动填充剩余空间 */
+        .main-content {
+            width: 100%;
+            max-width: 600px;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 占位元素 - 用于补偿 fixed-header 占据的空间 */
+        .fixed-header-placeholder {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        /* 固定在顶部的标题区域 - 始终可见 */
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #546E7A;
+            color: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 600px;
+            margin-left: 24px;
+            margin-right: 24px;
+            margin-top: 8px;
+            transition: top 0.1s ease-out;
+        }
+
+        .result-stats {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .result-liters {
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .result-liters small {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .result-money {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .result-detail {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 8px;
+            margin-top: 4px;
+            color: #e7ffce;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-left {
+            flex: 0 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .detail-discount {
+            flex-shrink: 0;
+            color: #ffa3ab;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .v-app {
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            align-items: stretch;
+            flex: 1 1 auto;
+        }
+
+        .v-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.02);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .v-card__text {
+            padding: 24px;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========== Expansion Panel 样式 ========== */
+        .v-expansion-panels {
+            margin-bottom: 24px;
+            border-radius: 6px;
+            background: transparent;
+        }
+
+        .v-expansion-panel {
+            background: white;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 1px rgba(0, 0, 0, .09);
+        }
+
+        .v-expansion-panel:not(:first-child) {
+            margin-top: 16px;
+        }
+
+        .v-expansion-panel__title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            background: #fafbfc;
+            transition: background 0.2s;
+            font-weight: 500;
+            color: #546e7a;
+        }
+
+        .v-expansion-panel__title:hover {
+            background: #f1f5f9;
+        }
+
+        .v-expansion-panel__title-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .v-expansion-panel__title-text {
+            font-size: 1rem;
+            letter-spacing: 0.3px;
+        }
+
+        .v-expansion-panel__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+            color: #64748b;
+        }
+
+        .v-expansion-panel-err {
+            color: #9b1a1a;
+            background: #fff5ea;
+        }
+
+        .v-expansion-panel--active .v-expansion-panel__icon {
+            transform: rotate(180deg);
+        }
+
+        .v-icon__svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+            display: block;
+        }
+
+        .clear-icon__svg {
+            width: 24px;
+            height: 24px;
+            fill: #78909C;
+            display: block;
+        }
+
+        .v-icon--settings .v-icon__svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .v-expansion-panel__content {
+            max-height: 0;
+            padding: 0 20px;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 0px solid transparent;
+        }
+
+        .v-expansion-panel--active .v-expansion-panel__content {
+            max-height: 500px;
+            padding: 20px 20px 8px 20px;
+            border-top-width: 1px;
+            border-top-color: #e2e8f0;
+        }
+
+        /* ========== 优惠计算结果样式 ========== */
+        .discount-results {
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: -9px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .discount-results.visible {
+            display: flex;
+        }
+
+        .discount-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            background: #ECEFF1;
+            color: #37474F;
+            white-space: nowrap;
+        }
+
+        .discount-chip--pay {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .discount-chip--volume {
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+
+        .discount-chip .dsc-label {
+            font-size: 0.72rem;
+            opacity: 0.75;
+            color: inherit;
+        }
+
+        .discount-chip .dsc-chip-text {
+            font-weight: 700;
+            color: inherit;
+        }
+
+        /* ========== 输入框样式 ========== */
+        .v-text-field {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .v-field {
+            position: relative;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .v-field__outline {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        .v-field__outline__start {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            transition: border-color 0.15s ease-out;
+            border: 2px solid #B0BEC5;
+        }
+
+        .v-field--focused .v-field__outline__start {
+            border-color: #455A64;
+            border-width: 2px;
+        }
+
+        .v-field__field {
+            position: relative;
+            padding: 0 16px;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+        }
+
+        .v-field__field input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #1e293b;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        /* 为有内容的输入框添加右侧内边距，为清空按钮预留空间 */
+        .v-text-field.has-value .v-field__field input {
+            padding-right: 32px; /* 为右侧清空按钮预留空间 */
+            padding-left: 32px;  /* 为保持居中，左侧也添加相同内边距 */
+        }
+
+        .v-field__field input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .v-field__field input[type="number"]::-webkit-inner-spin-button,
+        .v-field__field input[type="number"]::-webkit-outer-spin-button {
+            opacity: 0.5;
+        }
+
+        .v-label {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-60%);
+            font-size: 1rem;
+            color: #78909C;
+            background: transparent;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 1;
+            padding: 0 4px 0px 4px;
+        }
+
+        .v-text-field--has-value .v-label,
+        .v-text-field--focused .v-label {
+            top: 0;
+            transform: translateY(-60%) scale(0.85);
+            background: white;
+            color: #01579B;
+            padding: 0 4px 0px 4px;
+        }
+
+        .v-text-field--has-value .v-label:not(.v-text-field--focused .v-label) {
+            color: #78909C;
+        }
+
+        .v-field:hover .v-field__outline__start {
+            border-color: #90A4AE;
+        }
+
+        .v-field--focused:hover .v-field__outline__start {
+            border-color: #01579B;
+        }
+
+        .v-field--focused:hover .v-field__field input {
+            color: #01579B;
+        }
+
+        /* ========== 清空按钮样式 ========== */
+        .v-field__clearable {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #9ca3af;
+            background: white;
+            border-radius: 50%;
+            z-index: 2;
+            
+            /* 默认透明且不可见，禁止点击 */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            
+            /* 平滑过渡动画 */
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+
+            -webkit-tap-highlight-color: transparent;  /* 去除移动端触摸高亮背景 */
+            outline: none;
+        }
+
+        /* 鼠标悬停时变色 */
+        .v-field__clearable:hover {
+            color: #6b7280;
+        }
+
+        /* 清空按钮可见的条件：输入框有内容 并且 (鼠标悬停在父容器上 或 输入框处于聚焦状态) */
+        .v-text-field.has-value:hover .v-field__clearable,
+        .v-text-field.has-value .v-field:focus-within .v-field__clearable {
+            opacity: 0.6;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* 清除清空按钮点击时的默认轮廓和背景 */
+        .v-field__clearable:focus {
+            outline: none;
+        }
+
+        /* 点击时的反馈动画 */
+        .v-field__clearable:active {
+            transform: translateY(-50%) scale(0.9);
+            background-color: transparent !important;
+        }
+
+        /* 清空按钮点击后向右滑出的动画 */
+        .v-field__clearable--clearing {
+            transform: translateY(-50%) translateX(20px) !important;
+            opacity: 0 !important;
+            transition: transform 0.15s ease-out, opacity 0.15s ease-out !important;
+        }
+
+        /* 按钮样式 */
+        .v-btn {
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            width: 100%;
+            background: #607D8B;
+            color: white;
+            letter-spacing: 0.5px;
+            transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+            box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Ripple */
+        .v-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 10%, transparent 50.01%);
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.5s;
+            pointer-events: none;
+        }
+
+        .v-btn:active::after {
+            transform: translate(-50%, -50%) scale(2);
+            opacity: 0;
+            transition: 0s;
+        }
+
+        .v-btn:hover {
+            background: #546E7A;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        .button-wrapper {
+            margin-top: auto;
+            padding-top: 16px;
+            padding-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .button-wrapper .v-text-field {
+            margin-bottom: 24px;
+        }
+
+        .button-wrapper .v-text-field:last-of-type {
+            margin-bottom: 0;
+        }
+
+        #resetBtn {
+            margin-top: 24px;
+        }
+
+        .btn-icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* ========== Bottom Sheet 样式 ========== */
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.2s, opacity 0.2s;
+        }
+
+        .bottom-sheet-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .bottom-sheet-panel {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            width: 100%;
+            max-width: 600px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 28px 20px 30px 20px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .bottom-sheet-overlay.active .bottom-sheet-panel {
+            transform: translateY(0);
+        }
+
+        .bottom-sheet-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+            text-align: center;
+        }
+
+        .bottom-sheet-message {
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .bottom-sheet-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .bottom-sheet-actions .v-btn {
+            flex: 1;
+            margin: 0;
+            padding: 14px 16px;
+            font-size: 1rem;
+        }
+
+        .bottom-sheet-actions .v-btn--cancel {
+            background: #e2e8f0;
+            color: #475569;
+            box-shadow: none;
+        }
+
+        .bottom-sheet-actions .v-btn--cancel:hover {
+            background: #cbd5e1;
+        }
+
+        .bottom-sheet-actions .v-btn--confirm {
+            background: #607D8B;
+        }
+
+        .bottom-sheet-actions .v-btn--confirm:hover {
+            background: #546E7A;
+        }
+
+        /* ========== 响应式调整 ========== */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 24px 24px 24px;
+            }
+
+            .fixed-header {
+                padding: 16px 20px;
+                margin-top: 8px;
+                margin-left: 24px;
+                margin-right: 24px;
+            }
+
+            .result-liters {
+                font-size: 1.8rem;
+            }
+
+            .result-money {
+                font-size: 1.8rem;
+                font-weight: 700;
+            }
+
+            .v-field__field {
+                min-height: 52px;
+            }
+
+            .v-expansion-panel--active .v-expansion-panel__content {
+                padding: 25px 16px 0 16px;
+            }
+
+            .button-wrapper {
+                padding-bottom: 16px;
+            }
+
+            .bottom-sheet-panel {
+                padding: 24px 16px 20dvh 16px;
+            }
+
+            .bottom-sheet-actions .v-btn {
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 固定在顶部的标题区域 - 始终可见 -->
+    <div class="fixed-header" id="fixedHeader">
+        <div class="result-stats">
+            <div class="result-liters" id="resultLitersFixed">
+                — <small>升</small>
+            </div>
+            <div class="result-money" id="resultMoneyFixed">
+                 —
+            </div>
+        </div>
+        <div class="result-detail" id="detailTextFixed">
+            输入数据后自动计算
+        </div>
+    </div>
+
+    <!-- 占位元素，用于撑开 fixed-header 占用的空间 -->
+    <div class="fixed-header-placeholder" id="headerPlaceholder"></div>
+
+    <!-- 主内容容器 -->
+    <div class="main-content">
+        <div class="v-app">
+            <div class="v-card">
+                <div class="v-card__text">
+                    <!-- 可折叠配置区域 -->
+                    <div class="v-expansion-panels">
+                        <div class="v-expansion-panel" id="configPanel">
+                            <div class="v-expansion-panel__title" id="configPanelHeader">
+                                <div class="v-expansion-panel__title-left">
+                                    <span class="v-icon--settings">
+                                        <svg class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                            <path d="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="v-expansion-panel__title-text">配置信息</span>
+                                </div>
+                                <span class="v-expansion-panel__icon">
+                                    <svg class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                        <path d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="v-expansion-panel__content">
+                                <!-- 油箱总容积 -->
+                                <div class="v-text-field" id="field-tank">
+                                    <div class="v-field">
+                                        <div class="v-field__outline">
+                                            <div class="v-field__outline__start"></div>
+                                        </div>
+                                        <div class="v-field__field">
+                                            <input type="number" id="tankCapacity" step="0.5" placeholder=" ">
+                                            <!-- 清空按钮 -->
+                                            <span class="v-field__clearable" data-target="tankCapacity">
+                                                <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                                    <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <label class="v-label" for="tankCapacity">油箱总容积</label>
+                                </div>
+
+                                <!-- 隐藏油箱容积 -->
+                                <div class="v-text-field" id="field-reserve">
+                                    <div class="v-field">
+                                        <div class="v-field__outline">
+                                            <div class="v-field__outline__start"></div>
+                                        </div>
+                                        <div class="v-field__field">
+                                            <input type="number" id="reserveFuel" step="0.5" value="5" placeholder=" ">
+                                            <!-- 清空按钮 -->
+                                            <span class="v-field__clearable" data-target="reserveFuel">
+                                                <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                                    <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <label class="v-label" for="reserveFuel">隐藏油箱容积</label>
+                                </div>
+
+                                <!-- 平均油耗 -->
+                                <div class="v-text-field" id="field-consumption">
+                                    <div class="v-field">
+                                        <div class="v-field__outline">
+                                            <div class="v-field__outline__start"></div>
+                                        </div>
+                                        <div class="v-field__field">
+                                            <input type="number" id="avgFuelConsumption" step="0.1" placeholder=" ">
+                                            <!-- 清空按钮 -->
+                                            <span class="v-field__clearable" data-target="avgFuelConsumption">
+                                                <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                                    <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <label class="v-label" for="avgFuelConsumption">平均油耗 (L/100km)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 优惠计算面板 -->
+                        <div class="v-expansion-panel" id="discountPanel">
+                            <div class="v-expansion-panel__title" id="discountPanelHeader">
+                                <div class="v-expansion-panel__title-left">
+                                    <span class="v-icon--settings">
+                                        <svg class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                            <path d="M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.9,2 2,2.9 2,4V11C2,11.55 2.22,12.05 2.58,12.41L11.58,21.41C11.95,21.78 12.45,22 13,22C13.55,22 14.05,21.78 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.45 21.78,11.95 21.41,11.58M13,20L4,11V4H11L20,13L13,20M6.5,6.5A1.5,1.5 0 0,1 8,8A1.5,1.5 0 0,1 6.5,9.5A1.5,1.5 0 0,1 5,8A1.5,1.5 0 0,1 6.5,6.5Z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="v-expansion-panel__title-text">折扣计算</span>
+                                </div>
+                                <span class="v-expansion-panel__icon">
+                                    <svg class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                        <path d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="v-expansion-panel__content">
+                                <!-- 优惠计算结果 -->
+                                <div class="discount-results" id="discountResults">
+                                    <span class="discount-chip discount-chip--pay"><span class="dsc-chip-text" id="dscActualPay">¥ —</span></span>
+                                    <span class="discount-chip discount-chip--volume"><span class="dsc-chip-text" id="dscPumpVolume">— L</span></span>
+                                </div>
+                                <!-- 每升优惠价 -->
+                                <div class="v-text-field" id="field-discount">
+                                    <div class="v-field">
+                                        <div class="v-field__outline">
+                                            <div class="v-field__outline__start"></div>
+                                        </div>
+                                        <div class="v-field__field">
+                                            <input type="number" id="discountPerLiter" step="0.01" placeholder=" ">
+                                            <span class="v-field__clearable" data-target="discountPerLiter">
+                                                <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                                    <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <label class="v-label" for="discountPerLiter">每升优惠价 (元)</label>
+                                </div>
+                                <!-- 加油机输入金额 -->
+                                <div class="v-text-field" id="field-pump">
+                                    <div class="v-field">
+                                        <div class="v-field__outline">
+                                            <div class="v-field__outline__start"></div>
+                                        </div>
+                                        <div class="v-field__field">
+                                            <input type="number" id="pumpAmount" step="0.1" placeholder=" ">
+                                            <span class="v-field__clearable" data-target="pumpAmount">
+                                                <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                                    <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <label class="v-label" for="pumpAmount">加油机输入金额 (元)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 常用输入项 + 重置按钮 -->
+                    <div class="button-wrapper">
+                        <!-- 剩余续航 -->
+                        <div class="v-text-field" id="field-range">
+                            <div class="v-field">
+                                <div class="v-field__outline">
+                                    <div class="v-field__outline__start"></div>
+                                </div>
+                                <div class="v-field__field">
+                                    <input type="number" id="remainingRange" step="1" placeholder=" ">
+                                    <!-- 清空按钮 -->
+                                    <span class="v-field__clearable" data-target="remainingRange">
+                                        <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                            <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                            <label class="v-label" for="remainingRange">剩余续航 (km)</label>
+                        </div>
+
+                        <!-- 汽油单价 -->
+                        <div class="v-text-field" id="field-price">
+                            <div class="v-field">
+                                <div class="v-field__outline">
+                                    <div class="v-field__outline__start"></div>
+                                </div>
+                                <div class="v-field__field">
+                                    <input type="number" id="fuelPrice" step="0.1" placeholder=" ">
+                                    <!-- 清空按钮 -->
+                                    <span class="v-field__clearable" data-target="fuelPrice">
+                                        <svg class="clear-icon__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                            <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41L8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                            <label class="v-label" for="fuelPrice">汽油单价 (元/升)</label>
+                        </div>
+
+                        <!-- 重置按钮 -->
+                        <button class="v-btn" id="resetBtn">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
+                                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"></path>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet 确认对话框 -->
+    <div id="resetConfirmSheet" class="bottom-sheet-overlay">
+        <div class="bottom-sheet-panel">
+            <div class="bottom-sheet-title">确认清空</div>
+            <div class="bottom-sheet-message">确定要清空所有输入数据吗？此操作不可撤销。</div>
+            <div class="bottom-sheet-actions">
+                <button class="v-btn v-btn--cancel" id="cancelResetBtn">取消</button>
+                <button class="v-btn v-btn--confirm" id="confirmResetBtn">确认清空</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const STORAGE_KEY = 'fuel_calculator_pro';
+
+            const tankInput = document.getElementById('tankCapacity');
+            const reserveInput = document.getElementById('reserveFuel');
+            const rangeInput = document.getElementById('remainingRange');
+            const consumptionInput = document.getElementById('avgFuelConsumption');
+            const priceInput = document.getElementById('fuelPrice');
+            const resetBtn = document.getElementById('resetBtn');
+            
+            const confirmSheet = document.getElementById('resetConfirmSheet');
+            const cancelResetBtn = document.getElementById('cancelResetBtn');
+            const confirmResetBtn = document.getElementById('confirmResetBtn');
+            
+            // fixed-header 中的元素
+            const resultLitersFixed = document.getElementById('resultLitersFixed');
+            const resultMoneyFixed = document.getElementById('resultMoneyFixed');
+            const detailTextFixed = document.getElementById('detailTextFixed');
+            const fixedHeader = document.getElementById('fixedHeader');
+            const headerPlaceholder = document.getElementById('headerPlaceholder');
+
+            const configPanel = document.getElementById('configPanel');
+            const panelHeader = document.getElementById('configPanelHeader');
+
+            // 优惠计算面板元素
+            const discountPanel = document.getElementById('discountPanel');
+            const discountPanelHeader = document.getElementById('discountPanelHeader');
+            const discountPerLiterInput = document.getElementById('discountPerLiter');
+            const pumpAmountInput = document.getElementById('pumpAmount');
+            const discountResults = document.getElementById('discountResults');
+            const dscActualPay = document.getElementById('dscActualPay');
+            const dscPumpVolume = document.getElementById('dscPumpVolume');
+            
+            // 设置占位元素高度，防止内容被 fixed-header 遮挡
+            function updatePlaceholderHeight() {
+                if (fixedHeader && headerPlaceholder) {
+                    const headerHeight = fixedHeader.offsetHeight;
+                    headerPlaceholder.style.height = headerHeight + 'px';
+                }
+            }
+
+            // 记录结果显示区域原始底部位置（页面加载时固定）
+            let originalMsgBottom = fixedHeader ? fixedHeader.getBoundingClientRect().bottom : null;
+            // resetBtn.innerHTML = `{style.top：${fixedHeader.style.top}} | {offsetHeight：${fixedHeader.offsetHeight}} | {rect-bottom：${originalMsgBottom} `
+
+            // 获取键盘高度
+            function getKeyboardHeight() {
+                if (window.visualViewport) {
+                    return window.innerHeight - window.visualViewport.height;
+                }
+                return 0;
+            }
+            
+            // 检查 fixedHeader 的初始位置是否在可视视口内（简化版）
+            function isHeaderFullyVisible() {
+                if (!fixedHeader) return true;
+                if (!window.visualViewport) return true;
+                
+                const visualViewport = window.visualViewport;
+
+                // 视觉视口相对于布局视口的垂直偏移量 > 1/3msg区域，说明被挡住了
+                if (visualViewport.offsetTop >= (originalMsgBottom/3)){
+                    return false
+                } else {
+                    return true
+                }
+            }
+            
+            function adjustForKeyboard() {
+                if (!fixedHeader) return;
+                
+                // 获取 visualViewport 的高度（当前可视区域）
+                const visualHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                const windowHeight = window.innerHeight;
+                const keyboardHeight = windowHeight - visualHeight;
+                
+                // 获取标题栏原始位置
+                const defaultTop = 0;
+                
+                // 键盘弹起 且 标题栏被挤出视口
+                if (keyboardHeight > 100 && !isHeaderFullyVisible()) {
+                    // 键盘弹起且标题栏被挤出，视图偏移量+margin-top:8px
+                    let newTop = window.visualViewport.offsetTop + 8;
+                    const headerHeight = fixedHeader.offsetHeight;
+                    if (newTop + headerHeight + 20 > visualHeight) {
+                        newTop = Math.max(0, visualHeight - headerHeight - 20);
+                    }
+
+                    fixedHeader.style.top = newTop + 'px';
+                } else {
+                    // 键盘收起 或 标题栏还在视口内，恢复原始位置
+                    if (fixedHeader.style.top !== defaultTop + 'px') {
+                        fixedHeader.style.top = defaultTop + 'px';
+                    }
+                }
+            }
+            
+            // 监听 visualViewport 的 resize 事件（键盘弹起/收起）
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    requestAnimationFrame(adjustForKeyboard);
+                });
+                window.visualViewport.addEventListener('scroll', () => {
+                    requestAnimationFrame(adjustForKeyboard);
+                });
+            }
+            
+            // // 备用：监听窗口 resize 事件
+            // window.addEventListener('resize', () => {
+            //     requestAnimationFrame(adjustForKeyboard);
+            // });
+            
+            // // 监听滚动事件，当键盘弹起且滚动时也调整位置
+            // window.addEventListener('scroll', () => {
+            //     if (keyboardVisible) {
+            //         requestAnimationFrame(adjustForKeyboard);
+            //     }
+            // });
+            
+            // 聚焦输入框时额外确保位置正确
+            const allInputs = [tankInput, reserveInput, rangeInput, consumptionInput, priceInput];
+            allInputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('focus', () => {
+                        setTimeout(adjustForKeyboard, 50);
+                    });
+                    input.addEventListener('blur', () => {
+                        setTimeout(adjustForKeyboard, 50);
+                    });
+                }
+            });
+            
+            // 初始化调整
+            setTimeout(adjustForKeyboard, 100);
+            // ========== 键盘适配结束 ==========
+            
+            // 监听窗口大小变化和字体加载，重新计算占位高度
+            window.addEventListener('resize', updatePlaceholderHeight);
+            window.addEventListener('load', updatePlaceholderHeight);
+            // 使用 MutationObserver 监听内容变化（如结果显示区域高度变化）
+            const observer = new MutationObserver(updatePlaceholderHeight);
+            if (fixedHeader) {
+                observer.observe(fixedHeader, { attributes: true, childList: true, subtree: true });
+            }
+
+            function toggleConfigPanel() {
+                if (!configPanel) return;
+                configPanel.classList.toggle('v-expansion-panel--active');
+                const isActive = configPanel.classList.contains('v-expansion-panel--active');
+                try { localStorage.setItem('config_panel_open', isActive ? 'true' : 'false'); } catch (e) {}
+            }
+            
+            function initConfigPanelState() {
+                const savedState = localStorage.getItem('config_panel_open');
+                if (savedState === 'false') {
+                    configPanel.classList.remove('v-expansion-panel--active');
+                } else {
+                    configPanel.classList.add('v-expansion-panel--active');
+                }
+            }
+            
+            if (panelHeader) {
+                panelHeader.addEventListener('click', toggleConfigPanel);
+            }
+
+            function errInConfigPanel(hasErr) {
+                if (!panelHeader) return;
+
+                if(hasErr) {
+                    panelHeader.classList.add('v-expansion-panel-err');
+                } else {
+                    panelHeader.classList.remove('v-expansion-panel-err');
+                }
+            }
+            
+            function updateFloatingLabel(fieldId, inputElement) {
+                const container = document.getElementById(fieldId);
+                if (!container) return;
+                
+                const hasValue = inputElement && inputElement.value !== '';
+                const isFocused = document.activeElement === inputElement;
+                
+                if (hasValue) {
+                    container.classList.add('v-text-field--has-value');
+                } else {
+                    container.classList.remove('v-text-field--has-value');
+                }
+                
+                if (isFocused) {
+                    container.classList.add('v-text-field--focused');
+                    const fieldDiv = container.querySelector('.v-field');
+                    if (fieldDiv) fieldDiv.classList.add('v-field--focused');
+                } else {
+                    container.classList.remove('v-text-field--focused');
+                    const fieldDiv = container.querySelector('.v-field');
+                    if (fieldDiv) fieldDiv.classList.remove('v-field--focused');
+                }
+            }
+
+            function bindFloatingLabel(fieldId, inputElement) {
+                if (!inputElement) return;
+                
+                inputElement.addEventListener('focus', () => {
+                    updateFloatingLabel(fieldId, inputElement);
+                });
+                
+                inputElement.addEventListener('blur', () => {
+                    updateFloatingLabel(fieldId, inputElement);
+                });
+                
+                inputElement.addEventListener('input', () => {
+                    updateFloatingLabel(fieldId, inputElement);
+                });
+                
+                updateFloatingLabel(fieldId, inputElement);
+            }
+
+            bindFloatingLabel('field-tank', tankInput);
+            bindFloatingLabel('field-reserve', reserveInput);
+            bindFloatingLabel('field-range', rangeInput);
+            bindFloatingLabel('field-consumption', consumptionInput);
+            bindFloatingLabel('field-price', priceInput);
+            bindFloatingLabel('field-discount', discountPerLiterInput);
+            bindFloatingLabel('field-pump', pumpAmountInput);
+
+            function saveToLocalStorage() {
+                const data = {
+                    tankCapacity: tankInput.value,
+                    reserveFuel: reserveInput.value,
+                    remainingRange: rangeInput.value,
+                    avgFuelConsumption: consumptionInput.value,
+                    fuelPrice: priceInput.value,
+                    discountPerLiter: discountPerLiterInput.value,
+                    pumpAmount: pumpAmountInput.value,
+                    lastUpdated: new Date().toISOString()
+                };
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+            }
+
+            function loadFromLocalStorage() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        tankInput.value = data.tankCapacity !== undefined ? data.tankCapacity : '';
+                        reserveInput.value = data.reserveFuel !== undefined ? data.reserveFuel : '5';
+                        rangeInput.value = data.remainingRange !== undefined ? data.remainingRange : '';
+                        consumptionInput.value = data.avgFuelConsumption !== undefined ? data.avgFuelConsumption : '';
+                        priceInput.value = data.fuelPrice !== undefined ? data.fuelPrice : '';
+                        discountPerLiterInput.value = data.discountPerLiter !== undefined ? data.discountPerLiter : '';
+                        pumpAmountInput.value = data.pumpAmount !== undefined ? data.pumpAmount : '';
+                        
+                        updateFloatingLabel('field-tank', tankInput);
+                        updateFloatingLabel('field-reserve', reserveInput);
+                        updateFloatingLabel('field-range', rangeInput);
+                        updateFloatingLabel('field-consumption', consumptionInput);
+                        updateFloatingLabel('field-price', priceInput);
+                        updateFloatingLabel('field-discount', discountPerLiterInput);
+                        updateFloatingLabel('field-pump', pumpAmountInput);
+                        return true;
+                    } catch (e) {
+                        console.warn('读取 localStorage 失败', e);
+                    }
+                }
+                tankInput.value = '';
+                reserveInput.value = '5';
+                rangeInput.value = '';
+                consumptionInput.value = '';
+                priceInput.value = '';
+                discountPerLiterInput.value = '';
+                pumpAmountInput.value = '';
+                return false;
+            }
+
+            function showResetConfirm() {
+                if (confirmSheet) {
+                    confirmSheet.classList.add('active');
+                }
+            }
+
+            function hideResetConfirm() {
+                if (confirmSheet) {
+                    confirmSheet.classList.remove('active');
+                }
+            }
+
+            function performReset() {
+                tankInput.value = '';
+                reserveInput.value = '5';
+                rangeInput.value = '';
+                consumptionInput.value = '';
+                priceInput.value = '';
+                discountPerLiterInput.value = '';
+                pumpAmountInput.value = '';
+                
+                updateFloatingLabel('field-tank', tankInput);
+                updateFloatingLabel('field-reserve', reserveInput);
+                updateFloatingLabel('field-range', rangeInput);
+                updateFloatingLabel('field-consumption', consumptionInput);
+                updateFloatingLabel('field-price', priceInput);
+                updateFloatingLabel('field-discount', discountPerLiterInput);
+                updateFloatingLabel('field-pump', pumpAmountInput);
+                
+                saveToLocalStorage();
+                calculateAndDisplay();
+                hideResetConfirm();
+            }
+
+            function formatNumber(value, decimals = 1) {
+                if (isNaN(value) || value === null) return '0.0';
+                return value.toFixed(decimals);
+            }
+
+            // ========== 优惠计算面板 ==========
+            function toggleDiscountPanel() {
+                if (!discountPanel) return;
+                discountPanel.classList.toggle('v-expansion-panel--active');
+                const isActive = discountPanel.classList.contains('v-expansion-panel--active');
+                try { localStorage.setItem('discount_panel_open', isActive ? 'true' : 'false'); } catch (e) {}
+            }
+
+            function initDiscountPanelState() {
+                const savedState = localStorage.getItem('discount_panel_open');
+                if (savedState === 'false') {
+                    discountPanel.classList.remove('v-expansion-panel--active');
+                } else {
+                    discountPanel.classList.add('v-expansion-panel--active');
+                }
+            }
+
+            if (discountPanelHeader) {
+                discountPanelHeader.addEventListener('click', toggleDiscountPanel);
+            }
+
+            function errInDiscountPanel(hasErr) {
+                if (!discountPanelHeader) return;
+                if (hasErr) {
+                    discountPanelHeader.classList.add('v-expansion-panel-err');
+                } else {
+                    discountPanelHeader.classList.remove('v-expansion-panel-err');
+                }
+            }
+
+            // 更新优惠计算面板的结果显示
+            function updateDiscountResults(fuelPrice) {
+                let discountPerLiter = parseFloat(discountPerLiterInput.value);
+                let pumpAmount = parseFloat(pumpAmountInput.value);
+
+                // 检查是否有足够的有效数据
+                const hasPumpData = !isNaN(pumpAmount) && pumpAmount > 0;
+                const hasDiscountData = !isNaN(discountPerLiter) && discountPerLiter >= 0 && fuelPrice > 0;
+
+                if (!hasPumpData || !hasDiscountData) {
+                    discountResults.classList.remove('visible');
+                    errInDiscountPanel(false);
+                    return;
+                }
+
+                if (fuelPrice <= 0) {
+                    // fuelPrice 为空时显示 warning
+                    if (hasDiscountData || hasPumpData) {
+                        discountResults.classList.add('visible');
+                        dscActualPay.textContent = '¥ —';
+                        dscPumpVolume.textContent = '— L';
+                        errInDiscountPanel(true);
+                    }
+                    return;
+                }
+
+                errInDiscountPanel(false);
+                discountResults.classList.add('visible');
+
+                // 实际Data
+                if (hasPumpData) {
+                    // 加油容积 = 加油机金额 / 油价
+                    const pumpVolume = fuelPrice > 0 ? pumpAmount / fuelPrice : 0;
+                    dscPumpVolume.textContent = formatNumber(pumpVolume, 1) + ' L';
+
+                    // 
+                    const actualPay = pumpVolume * (fuelPrice - discountPerLiter);
+                    dscActualPay.textContent = formatNumber(actualPay, 2) + ' CNY';
+                } else {
+                    dscActualPay.textContent = '¥ —';
+                    dscPumpVolume.textContent = '— L';
+                }
+
+                return;
+            }
+
+            function calculateAndDisplay() {
+                let tankCapacity = parseFloat(tankInput.value);
+                let reserveFuel = parseFloat(reserveInput.value);
+                let remainingRange = parseFloat(rangeInput.value);
+                let avgConsumption = parseFloat(consumptionInput.value);
+                let fuelPrice = parseFloat(priceInput.value);
+
+                if (isNaN(tankCapacity) || tankCapacity <= 0) {
+                    showError('请输入有效的油箱总容积（大于0）');
+                    errInConfigPanel(true);
+                    updateDiscountResults(0);
+                    return;
+                }
+
+                if (isNaN(reserveFuel) || reserveFuel < 0) {
+                    showError('隐藏容积无效，请输入≥0的数值');
+                    errInConfigPanel(true);
+                    updateDiscountResults(0);
+                    return;
+                }
+                
+                if (isNaN(avgConsumption) || avgConsumption <= 0) {
+                    showError('平均油耗无效，请输入大于0的数值');
+                    errInConfigPanel(true);
+                    updateDiscountResults(0);
+                    return;
+                }
+                
+                // panel bg-color reset
+                errInConfigPanel(false);
+
+                if (isNaN(remainingRange) || remainingRange < 0) {
+                    showError('剩余续航无效，请输入≥0的数值');
+                    updateDiscountResults(fuelPrice);
+                    return;
+                }
+
+                if (isNaN(fuelPrice) || fuelPrice < 0) {
+                    fuelPrice = 0;
+                }
+
+                let remainingFuelFromRange = (remainingRange * avgConsumption) / 100;
+                let totalRemainingFuel = reserveFuel + remainingFuelFromRange;
+                let maxFillable = tankCapacity - totalRemainingFuel;
+
+                if (maxFillable < 0) maxFillable = 0;
+                if (maxFillable > tankCapacity) maxFillable = tankCapacity;
+
+                let totalCost = maxFillable * fuelPrice;
+
+                let pricePerKm = 0;     // 每km花费
+                let dscPricePerKm = 0;  // 折扣下每km花费
+                let detailLeftHtml = '';    // 面板左侧显示内容
+                
+                if(fuelPrice > 0) {
+                    pricePerKm = fuelPrice * (avgConsumption / 100);
+                    detailLeftHtml = ` ${formatNumber(pricePerKm, 2)} 元/km`;
+                }
+                
+                // 计算动态折扣百分比（来自优惠计算面板）
+                let payPercent = null;
+                let discountPerLiter = parseFloat(discountPerLiterInput.value);
+                if (!isNaN(discountPerLiter) && discountPerLiter >= 0 && fuelPrice > 0) {
+                    const discountRate = (discountPerLiter / fuelPrice) * 100;
+                    payPercent = (100 - discountRate).toFixed(1);
+                    
+                    dscPricePerKm = (fuelPrice - discountPerLiter) * (avgConsumption / 100)
+
+                    if (discountPerLiter > 0) {
+                        detailLeftHtml = ` ${formatNumber(pricePerKm, 2)} (${formatNumber(dscPricePerKm, 2)}) 元/km`;
+                    }
+                }
+                
+                // 更新优惠计算结果
+                updateDiscountResults(fuelPrice);
+
+                let detailHtml;
+                if (payPercent !== null) {
+                    detailHtml = `<span class="detail-left">${detailLeftHtml}</span><span class="detail-discount">${payPercent}%</span>`;
+                } else {
+                    detailHtml = `<span class="detail-left">${detailLeftHtml}</span>`;
+                }
+                
+                // 更新 fixed-header 中的显示
+                if (resultLitersFixed) resultLitersFixed.innerHTML = `${formatNumber(maxFillable, 1)} <small>升</small>`;
+                if (resultMoneyFixed) resultMoneyFixed.innerHTML = ` ${formatNumber(totalCost, 2)}`;
+                if (detailTextFixed) detailTextFixed.innerHTML = detailHtml;
+
+            }
+
+            function showError(msg) {
+                const errorHtml = msg;
+                
+                if (resultLitersFixed) resultLitersFixed.innerHTML = `⚠️ <small>ERROR</small>`;
+                if (resultMoneyFixed) resultMoneyFixed.innerHTML = `请检查输入`;
+                if (detailTextFixed) detailTextFixed.innerHTML = errorHtml;
+              
+            }
+
+            function onInputChange() {
+                calculateAndDisplay();
+                saveToLocalStorage();
+            }
+
+            resetBtn.addEventListener('click', showResetConfirm);
+
+            if (cancelResetBtn) {
+                cancelResetBtn.addEventListener('click', hideResetConfirm);
+            }
+
+            if (confirmResetBtn) {
+                confirmResetBtn.addEventListener('click', performReset);
+            }
+
+            if (confirmSheet) {
+                confirmSheet.addEventListener('click', (e) => {
+                    if (e.target === confirmSheet) {
+                        hideResetConfirm();
+                    }
+                });
+            }
+
+            const inputs = [tankInput, reserveInput, rangeInput, consumptionInput, priceInput];
+            inputs.forEach(input => {
+                input.addEventListener('input', onInputChange);
+            });
+
+            // 折扣面板的输入也触发重新计算
+            [discountPerLiterInput, pumpAmountInput].forEach(input => {
+                if (input) {
+                    input.addEventListener('input', () => {
+                        calculateAndDisplay();
+                        saveToLocalStorage();
+                    });
+                }
+            });
+
+            // ========== 清空按钮功能 ==========
+            function initClearableButtons() {
+                const clearableButtons = document.querySelectorAll('.v-field__clearable');
+                
+                clearableButtons.forEach(button => {
+                    // 移除旧的事件监听，避免重复绑定
+                    button.removeEventListener('pointerdown', handleClearPointerDown);
+                    button.addEventListener('pointerdown', handleClearPointerDown);
+                });
+            }
+
+            function handleClearPointerDown(event) {
+                // 阻止默认行为和冒泡，防止焦点从 input 转移
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const button = event.currentTarget;
+                const targetId = button.getAttribute('data-target');
+                if (!targetId) return;
+                
+                const targetInput = document.getElementById(targetId);
+                if (!targetInput) return;
+                
+                // 记录当前是否聚焦
+                const wasFocused = document.activeElement === targetInput;
+                
+                // 清空输入框的值
+                targetInput.value = '';
+                
+                // 触发 input 事件
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // 更新浮动标签状态
+                const fieldContainer = button.closest('.v-text-field');
+                if (fieldContainer) {
+                    updateFloatingLabelForField(fieldContainer, targetInput);
+                }
+                
+                // 如果之前有焦点，重新聚焦并保持键盘
+                if (wasFocused) {
+                    targetInput.focus();
+                }
+                
+                // 动画效果（可选）
+                button.classList.add('v-field__clearable--clearing');
+                setTimeout(() => {
+                    button.classList.remove('v-field__clearable--clearing');
+                }, 150);
+            }
+
+            function handleClearClick(event) {
+                event.stopPropagation(); // 阻止事件冒泡
+                const button = event.currentTarget;
+                const targetId = button.getAttribute('data-target');
+                
+                if (targetId) {
+                    const targetInput = document.getElementById(targetId);
+                    if (targetInput && targetInput.value !== '') {
+                        // 添加滑动消失的类，触发动画
+                        button.classList.add('v-field__clearable--clearing');
+                        
+                        // 延迟清空操作，等待动画完成
+                        setTimeout(() => {
+                            targetInput.value = '';
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            
+                            // 更新浮动标签状态
+                            const fieldContainer = button.closest('.v-text-field');
+                            if (fieldContainer) {
+                                updateFloatingLabelForField(fieldContainer, targetInput);
+                            }
+                            
+                            // 动画结束后，移除动画类并手动触发失焦，让按钮保持隐藏
+                            button.classList.remove('v-field__clearable--clearing');
+                            targetInput.blur();
+                        }, 150); // 150ms 与 CSS 过渡时间匹配
+                    }
+                }
+            }
+
+            // 手动更新单个输入框的浮动标签状态
+            function updateFloatingLabelForField(container, inputElement) {
+                const hasValue = inputElement && inputElement.value !== '';
+                const isFocused = document.activeElement === inputElement;
+                
+                if (hasValue) {
+                    container.classList.add('v-text-field--has-value');
+                } else {
+                    container.classList.remove('v-text-field--has-value');
+                }
+                
+                if (isFocused) {
+                    container.classList.add('v-text-field--focused');
+                    const fieldDiv = container.querySelector('.v-field');
+                    if (fieldDiv) fieldDiv.classList.add('v-field--focused');
+                } else {
+                    container.classList.remove('v-text-field--focused');
+                    const fieldDiv = container.querySelector('.v-field');
+                    if (fieldDiv) fieldDiv.classList.remove('v-field--focused');
+                }
+            }
+
+            // 监听输入框内容变化，控制清空按钮显示/隐藏
+            function observeInputValueChanges() {
+                const inputs = document.querySelectorAll('.v-field__field input');
+                
+                inputs.forEach(input => {
+                    input.removeEventListener('input', updateClearableVisibility);
+                    input.addEventListener('input', updateClearableVisibility);
+                    
+                    // 初始化时检查一次
+                    updateClearableVisibility.call(input);
+                });
+            }
+
+            function updateClearableVisibility() {
+                const fieldContainer = this.closest('.v-text-field');
+                if (fieldContainer) {
+                    if (this.value !== '') {
+                        fieldContainer.classList.add('has-value');
+                    } else {
+                        fieldContainer.classList.remove('has-value');
+                    }
+                }
+            }
+
+            // 初始化所有清空按钮
+            function initAllClearable() {
+                initClearableButtons();
+                observeInputValueChanges();
+            }
+
+            // 初始化清空按钮功能
+            // initAllClearable();
+            // 在页面加载后调用
+            document.addEventListener('DOMContentLoaded', initAllClearable);
+
+            initConfigPanelState();
+            initDiscountPanelState();
+            loadFromLocalStorage();
+            calculateAndDisplay();
+            
+            if (!tankInput.value && !rangeInput.value && !consumptionInput.value) {
+                const defaultDetail = '✨ 请在上方输入车辆数据，将自动保存';
+                if (detailTextFixed) detailTextFixed.innerHTML = defaultDetail;
+                if (resultLitersFixed) resultLitersFixed.innerHTML = '— <small>升</small>';
+                if (resultMoneyFixed) resultMoneyFixed.innerHTML = ' —';
+            }
+            
+            // 初始更新占位高度
+            setTimeout(updatePlaceholderHeight, 100);
+        })();
+    </script>
+</body>
+</html>
